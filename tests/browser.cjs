@@ -68,11 +68,43 @@ const fs = require('node:fs');
     await page.reload();
     assert.equal(await page.locator('.alarm-row').count(), 9);
 
-    for (const minutes of [3, 5, 10, 20, 30, 60, 120]) {
+    for (const minutes of [1, 3, 5, 10, 20, 30, 60, 120]) {
       await page.click(`[data-minutes="${minutes}"]`);
       const expected = minutes >= 60 ? `${String(minutes / 60).padStart(2, '0')}:00:00` : `${String(minutes).padStart(2, '0')}:00`;
       assert.equal(await page.locator('#timer-remaining').textContent(), expected);
+      await page.click('#timer-reset');
     }
+    // Every preset adds to a running timer, retaining elapsed time.
+    await page.click('[data-minutes="1"]');
+    await page.clock.runFor(2000);
+    let addedSeconds = 58;
+    for (const minutes of [1, 3, 5, 10, 20, 30, 60, 120]) {
+      await page.click(`[data-minutes="${minutes}"]`);
+      addedSeconds += minutes * 60;
+      const h = Math.floor(addedSeconds / 3600);
+      const m = Math.floor(addedSeconds / 60) % 60;
+      const s = addedSeconds % 60;
+      const expected = [ ...(h ? [h] : []), m, s ].map(n => String(n).padStart(2, '0')).join(':');
+      assert.equal(await page.locator('#timer-remaining').textContent(), expected);
+    }
+    await page.click('#timer-reset');
+    assert.equal(await page.locator('#timer-remaining').textContent(), '00:00');
+    await page.clock.fastForward(300000);
+    assert.equal(await page.locator('#ring-dialog').evaluate(e => e.open), false);
+    await page.click('[data-minutes="1"]');
+    await page.clock.runFor(2000);
+    await page.click('#timer-pause');
+    await page.click('[data-minutes="1"]');
+    assert.equal(await page.locator('#timer-remaining').textContent(), '01:58');
+    await page.clock.fastForward(10000);
+    assert.equal(await page.locator('#timer-remaining').textContent(), '01:58');
+    await page.click('#timer-pause');
+    await page.clock.fastForward(117000);
+    assert.equal(await page.locator('#ring-dialog').evaluate(e => e.open), false);
+    await page.clock.runFor(1000);
+    assert.equal(await page.locator('#ring-dialog').evaluate(e => e.open), true);
+    await page.click('#ring-stop');
+    await page.click('#timer-reset');
     await page.click('[data-minutes="3"]');
     await page.clock.runFor(2000);
     await page.click('#timer-pause');
@@ -135,6 +167,6 @@ const fs = require('node:fs');
     assert.match(await page.locator('#storage-status').textContent(), /読み込めません/);
     assert.equal(await page.locator('.alarm-row').count(), 0);
     assert.deepEqual(errors, []);
-    console.log('PASS: clock/date, alarm validation/CRUD/10-limit/persistence/weekdays/disabled/ring/snooze/audio stop, seven timers/pause/resume/stop/reset/expiry, weather success/failure/geolocation, mobile layout, storage corruption; no page errors.');
+    console.log('PASS: clock/date, alarm validation/CRUD/10-limit/persistence/weekdays/disabled/ring/snooze/audio stop, eight timers/add time/running and paused/clear/pause/resume/stop/expiry, weather success/failure/geolocation, mobile layout, storage corruption; no page errors.');
   } finally { await browser.close(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });

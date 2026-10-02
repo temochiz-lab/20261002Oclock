@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#152b29">
+  <meta name="theme-color" content="#000000">
   <title>Oclock — 時計・アラーム・タイマー</title>
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="style.css">
@@ -11,19 +11,15 @@
 </head>
 <body>
   <main class="app">
-    <header class="topbar">
-      <a class="brand" href="./" aria-label="Oclock ホーム"><span class="brand-icon">◷</span> Oclock<span class="brand-dot">.</span></a>
-      <button id="sound-enable" class="quiet">◌ 音を有効にする</button>
-    </header>
-
     <section class="clock-panel" aria-label="現在の日時">
-      <p class="eyebrow">A LITTLE TIME, JUST FOR YOU</p>
       <time id="clock" class="clock">00:00:00</time>
-      <p id="date" class="date"></p>
-      <div class="weather-line">
-        <span id="weather" role="status">天気を取得中…</span>
-        <button id="location" class="text-button">現在地を使う</button>
-        <button id="fixed-location" class="text-button" hidden>船橋市に戻す</button>
+      <div class="info-line">
+        <p id="date" class="date"></p>
+        <div class="weather-line">
+          <span id="weather" role="status">天気を取得中…</span>
+          <button id="location" class="text-button">現在地を使う</button>
+          <button id="fixed-location" class="text-button" hidden>船橋市に戻す</button>
+        </div>
       </div>
       <p id="weather-note" class="weather-note"></p>
     </section>
@@ -39,22 +35,23 @@
 
       <section class="card timer-panel" aria-labelledby="timer-heading">
         <div class="section-heading"><div><p class="eyebrow">MAKE A MOMENT</p><h2 id="timer-heading">タイマー</h2></div><span class="section-icon" aria-hidden="true">◷</span></div>
-        <p class="section-description">時間を選んで、すぐにスタート。</p>
+        <p class="section-description">時間を選んで開始。動作中・一時停止中は残り時間に加算。</p>
         <div id="presets" class="presets" aria-label="タイマーの時間">
-          <button data-minutes="3">3<span>分</span></button><button data-minutes="5">5<span>分</span></button><button data-minutes="10">10<span>分</span></button><button data-minutes="20">20<span>分</span></button><button data-minutes="30">30<span>分</span></button><button data-minutes="60">60<span>分</span></button><button data-minutes="120">120<span>分</span></button>
+          <button data-minutes="1">1<span>分</span></button><button data-minutes="3">3<span>分</span></button><button data-minutes="5">5<span>分</span></button><button data-minutes="10">10<span>分</span></button><button data-minutes="20">20<span>分</span></button><button data-minutes="30">30<span>分</span></button><button data-minutes="60">60<span>分</span></button><button data-minutes="120">120<span>分</span></button>
         </div>
         <div class="timer-display"><p id="timer-status">準備ができたら、ひと呼吸。</p><output id="timer-remaining" aria-label="残り時間">00:00</output><div class="progress-track"><div id="timer-progress"></div></div></div>
-        <div class="timer-controls"><button id="timer-stop" disabled>停止</button><button id="timer-pause" class="primary" disabled>一時停止</button><button id="timer-reset" disabled>リセット</button></div>
+        <div class="timer-controls"><button id="timer-stop" disabled>停止</button><button id="timer-pause" class="primary" disabled>一時停止</button><button id="timer-reset" disabled>クリア</button></div>
       </section>
     </div>
-    <footer><p><span class="live-dot"></span> 端末の時刻を表示しています</p><p>通知を受け取る間はページを開き、端末のスリープを解除してください。</p><p class="credits">Weather data by <a href="https://open-meteo.com/" target="_blank" rel="noreferrer">Open-Meteo</a> · Oclock / MIT</p></footer>
   </main>
 
   <dialog id="alarm-dialog" aria-labelledby="dialog-title">
     <form id="alarm-form">
       <div class="dialog-heading"><h2 id="dialog-title">アラームを追加</h2><button type="button" id="dialog-close" class="icon-button" aria-label="閉じる">×</button></div>
       <label class="field-label" for="alarm-time">時刻</label><input id="alarm-time" type="time" required step="60" value="07:00">
-      <fieldset><legend>繰り返す曜日</legend><div id="days" class="days"></div><button type="button" id="every-day" class="text-button">毎日を選択</button></fieldset>
+      <label class="enabled-label"><input id="one-time" type="checkbox"> 一回限りのアラーム</label>
+      <label id="alarm-date-label" class="field-label" for="alarm-date" hidden>日付</label><input id="alarm-date" type="date" hidden>
+      <fieldset id="repeat-field"><legend>繰り返す曜日</legend><div id="days" class="days"></div><button type="button" id="every-day" class="text-button">毎日を選択</button></fieldset>
       <label class="enabled-label"><input id="alarm-enabled" type="checkbox" checked> アラームを有効にする</label>
       <p id="form-error" class="error" role="alert"></p>
       <div class="dialog-actions"><button type="button" id="dialog-cancel">キャンセル</button><button type="submit" class="primary">保存</button></div>

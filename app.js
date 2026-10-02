@@ -19,11 +19,12 @@ const SoundManager = {
       this.ready = true;
       if (!UI.ringing.length) { this.audio.pause(); this.audio.currentTime = 0; }
       this.audio.muted = false;
-      $('#sound-enable').textContent = '✓ 音は有効です';
-      $('#sound-enable').classList.add('ready');
+      const soundButton = $('#sound-enable');
+      if (soundButton) { soundButton.textContent = '✓ 音は有効です'; soundButton.classList.add('ready'); }
     } catch {
       this.audio.muted = false;
-      $('#sound-enable').textContent = '音を有効にする（再試行）';
+      const soundButton = $('#sound-enable');
+      if (soundButton) soundButton.textContent = '音を有効にする（再試行）';
     }
   },
   async play() {
@@ -48,7 +49,8 @@ const AlarmManager = {
       if (!Array.isArray(alarms) || alarms.length > 10 || !alarms.every(a =>
         a && typeof a.id === 'string' && Number.isInteger(a.hour) && a.hour >= 0 && a.hour < 24 &&
         Number.isInteger(a.minute) && a.minute >= 0 && a.minute < 60 && typeof a.enabled === 'boolean' &&
-        Array.isArray(a.days) && a.days.length > 0 && a.days.every(d => Number.isInteger(d) && d >= 0 && d < 7)
+        Array.isArray(a.days) && a.days.length > 0 && a.days.every(d => Number.isInteger(d) && d >= 0 && d < 7) &&
+        (a.oneTime === true ? /^\d{4}-\d{2}-\d{2}$/.test(a.date || '') : true)
       ) || new Set(alarms.map(a => a.id)).size !== alarms.length) throw new Error('Invalid data');
       this.alarms = alarms;
     } catch { $('#storage-status').textContent = '保存データを読み込めませんでした。新しい設定はこの画面で利用できます。'; }
@@ -64,6 +66,17 @@ const AlarmManager = {
     const hits = [];
     for (const a of this.alarms) {
       if (!a.enabled) continue;
+      if (a.oneTime) {
+        const scheduled = new Date(`${a.date}T${pad(a.hour)}:${pad(a.minute)}:00`);
+        const stamp = scheduled.getTime();
+        if (stamp > start && stamp <= now && this.fired.get(a.id) !== stamp) {
+          this.fired.set(a.id, stamp);
+          a.enabled = false;
+          this.save();
+          hits.push({ type: 'alarm', id: a.id, label: `${a.date} ${pad(a.hour)}:${pad(a.minute)} のアラーム` });
+        }
+        continue;
+      }
       for (const dayOffset of [-1, 0]) {
         const scheduled = new Date(now);
         scheduled.setDate(scheduled.getDate() + dayOffset);
@@ -86,9 +99,19 @@ const AlarmManager = {
 const TimerManager = {
   state: 'idle', total: 0, remaining: 0, end: 0,
   start(minutes) {
+    const now = Date.now();
+    if (this.state === 'running') this.tick(now);
+    if (this.state === 'running' || this.state === 'paused') {
+      const added = minutes * 60000;
+      this.total += added;
+      this.remaining += added;
+      if (this.state === 'running') this.end += added;
+      this.render();
+      return;
+    }
     this.total = minutes * 60000;
     this.remaining = this.total;
-    this.end = Date.now() + this.total;
+    this.end = now + this.total;
     this.state = 'running';
     this.render();
   },
@@ -109,7 +132,7 @@ const TimerManager = {
     this.render();
   },
   stop() { this.state = 'stopped'; this.remaining = 0; this.render(); },
-  reset() { this.state = 'idle'; this.total = this.remaining = 0; this.render(); },
+  reset() { this.state = 'idle'; this.total = this.remaining = this.end = 0; this.render(); },
   render() {
     const seconds = Math.ceil(this.remaining / 1000);
     const h = Math.floor(seconds / 3600), m = Math.floor(seconds / 60) % 60, s = seconds % 60;
@@ -197,7 +220,8 @@ const UI = {
       const row = document.createElement('div');
       row.className = `alarm-row${a.enabled ? '' : ' off'}`;
       const time = `${pad(a.hour)}:${pad(a.minute)}`;
-      row.innerHTML = `<div class="alarm-info"><div class="alarm-time">${time}</div><div class="alarm-days">${new Set(a.days).size === 7 ? '毎日' : [...new Set(a.days)].sort().map(d => weekdays[d]).join('・')}</div></div>`;
+      const repeatLabel = a.oneTime ? `一回限り · ${a.date}` : (new Set(a.days).size === 7 ? '毎日' : [...new Set(a.days)].sort().map(d => weekdays[d]).join('・'));
+      row.innerHTML = `<div class="alarm-info"><div class="alarm-time">${time}</div><div class="alarm-days">${repeatLabel}</div></div>`;
       const toggle = document.createElement('button');
       toggle.className = 'toggle'; toggle.setAttribute('role', 'switch'); toggle.setAttribute('aria-checked', String(a.enabled)); toggle.setAttribute('aria-label', `${time} のアラーム`); toggle.textContent = a.enabled ? 'ON' : 'OFF';
       toggle.onclick = () => { a.enabled = !a.enabled; if (!a.enabled) AlarmManager.cancelPending(a.id); AlarmManager.save(); this.renderAlarms(); };
@@ -213,6 +237,9 @@ const UI = {
     $('#dialog-title').textContent = alarm ? 'アラームを編集' : 'アラームを追加';
     $('#alarm-time').value = alarm ? `${pad(alarm.hour)}:${pad(alarm.minute)}` : '07:00';
     $('#alarm-enabled').checked = alarm?.enabled ?? true;
+    $('#one-time').checked = alarm?.oneTime ?? false;
+    $('#alarm-date').value = alarm?.date ?? new Date().toISOString().slice(0, 10);
+    this.updateOneTimeFields();
     $('#form-error').textContent = '';
     for (const input of document.querySelectorAll('#days input')) input.checked = alarm ? alarm.days.includes(Number(input.value)) : true;
     $('#alarm-dialog').showModal();
@@ -220,14 +247,22 @@ const UI = {
   saveEditor(event) {
     event.preventDefault();
     const days = [...document.querySelectorAll('#days input:checked')].map(input => Number(input.value));
-    if (!days.length) { $('#form-error').textContent = '曜日を1つ以上選んでください。'; return; }
+    const oneTime = $('#one-time').checked;
+    if (!oneTime && !days.length) { $('#form-error').textContent = '曜日を1つ以上選んでください。'; return; }
+    if (oneTime && !$('#alarm-date').value) { $('#form-error').textContent = '日付を選んでください。'; return; }
     if (!this.editing && AlarmManager.alarms.length >= 10) return;
     const [hour, minute] = $('#alarm-time').value.split(':').map(Number);
-    const alarm = { id: this.editing ?? crypto.randomUUID(), hour, minute, days, enabled: $('#alarm-enabled').checked };
+    const alarm = { id: this.editing ?? crypto.randomUUID(), hour, minute, days: oneTime ? [new Date(`${$('#alarm-date').value}T00:00:00`).getDay()] : days, date: oneTime ? $('#alarm-date').value : null, oneTime, enabled: $('#alarm-enabled').checked };
     const index = AlarmManager.alarms.findIndex(a => a.id === this.editing);
     if (index >= 0) { AlarmManager.alarms[index] = alarm; AlarmManager.cancelPending(alarm.id); }
     else AlarmManager.alarms.push(alarm);
     AlarmManager.save(); this.renderAlarms(); $('#alarm-dialog').close();
+  },
+  updateOneTimeFields() {
+    const oneTime = $('#one-time').checked;
+    $('#alarm-date').hidden = !oneTime;
+    $('#alarm-date-label').hidden = !oneTime;
+    $('#repeat-field').hidden = oneTime;
   },
   ring(items) {
     this.ringing.push(...items);
@@ -269,6 +304,7 @@ $('#alarm-add').onclick = () => UI.openEditor();
 $('#alarm-form').onsubmit = event => UI.saveEditor(event);
 $('#dialog-close').onclick = $('#dialog-cancel').onclick = () => $('#alarm-dialog').close();
 $('#every-day').onclick = () => document.querySelectorAll('#days input').forEach(input => { input.checked = true; });
+$('#one-time').onchange = () => UI.updateOneTimeFields();
 $('#presets').onclick = event => { const button = event.target.closest('[data-minutes]'); if (button) TimerManager.start(Number(button.dataset.minutes)); };
 $('#timer-pause').onclick = () => TimerManager.pause();
 $('#timer-stop').onclick = () => TimerManager.stop();

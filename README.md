@@ -1,53 +1,71 @@
 # Oclock
 
-A lightweight clock, recurring alarm, timer, and weather dashboard built with plain HTML, CSS, and JavaScript. The interface is in Japanese.
+HTML・CSS・JavaScriptだけで動作する、時計・アラーム・タイマー・天気表示のWebアプリです。PCとスマートフォンに対応しています。背景は黒、時計は水色のダークモードです。
 
-[日本語の使い方](docs/README.ja.md)
+## GitHub Pages
 
-## Run locally
+**[Oclockを開く](https://temochiz-lab.github.io/20261002Oclock/)**
 
-Serve this directory with any static HTTP server, for example:
+GitHub Pages URL：<https://temochiz-lab.github.io/20261002Oclock/>
+
+操作の詳細は [使い方](docs/README.ja.md) を参照してください。
+
+## 主な機能
+
+- **時計**：端末の現在時刻を24時間表記（HH:MM:SS）で表示。日付と曜日も表示します。
+- **アラーム**：最大10件。曜日指定、毎日、一回限り、ON/OFF、編集、削除に対応し、変更はブラウザに自動保存します。
+- **スヌーズ**：アラーム鳴動中に停止、または5分後の再通知を選べます。
+- **タイマー**：1・3・5・10・20・30・60・120分のボタンで開始します。動作中・一時停止中に押すと、その分を残り時間に加算します。
+- **タイマー操作**：一時停止・再開・停止・クリアに対応。クリアは残り時間と選択を初期状態に戻します。
+- **時間計算**：終了予定時刻との差から残り時間を計算し、処理遅延によるずれの蓄積を防ぎます。
+- **天気・気温**：[Open-Meteo](https://open-meteo.com/en/docs)から15分ごとに取得します。初期地点は船橋市で、現在地にも切り替えられます。
+- **通知音**：独自に生成したアラーム音を同梱しています。
+
+## ローカルで起動
+
+このフォルダーで、次のコマンドなどを使って静的HTTPサーバーを起動します。
 
 ```sh
 python -m http.server 8787 --bind 127.0.0.1
 ```
 
-Open http://localhost:8787. No build step or runtime dependencies are required. Use localhost or HTTPS for geolocation. Static hosting (including GitHub Pages) is supported.
+ブラウザで [http://localhost:8787](http://localhost:8787) を開きます。ビルドや実行用ライブラリのインストールは不要です。現在地の取得には localhost または HTTPS を使用してください。
 
-## Features
+## ファイル構成
 
-- Large 24-hour clock, local date and weekday, updated from the device clock.
-- Up to ten recurring alarms with weekday selection, enable/disable, editing, deletion, and automatic localStorage persistence.
-- Stop controls and a five-minute snooze for alarms.
-- Instant 3, 5, 10, 20, 30, 60, and 120-minute timers, with pause, resume, stop, and reset.
-- Deadline-based timer accounting to avoid accumulated interval drift.
-- Weather and temperature from [Open-Meteo](https://open-meteo.com/en/docs), refreshed every fifteen minutes. The default location is Funabashi, Japan; users may explicitly request geolocation.
-- Responsive desktop and mobile layouts, keyboard controls, and bundled original notification audio.
-
-## Files
-
-| File | Purpose |
+| ファイル | 内容 |
 | --- | --- |
-| `index.html` | Japanese interface and dialogs |
-| `style.css` | Responsive styling |
-| `app.js` | Clock, alarms, timer, weather, audio, and UI |
-| `sounds/alarm.mp3` | Original synthesized alarm sound (MIT) |
-| `tests/browser.cjs` | Browser acceptance checks using Playwright |
+| `index.html` | 画面とダイアログ |
+| `style.css` | 配色・レイアウト・スマートフォン対応 |
+| `app.js` | 時計・アラーム・タイマー・天気・音・保存処理 |
+| `sounds/alarm.mp3` | 独自に生成した通知音（MIT） |
+| `docs/README.ja.md` | 操作方法 |
+| `tests/browser.cjs` | Playwrightによるブラウザ動作テスト |
 
-## Behavior and limitations
+## 動作条件と保存
 
-Keep the page open and the device awake to receive alerts. Closed browsers and sleeping devices cannot ring reliably; background tabs may delay callbacks. Alarms delayed by up to one minute are recognized once; older missed alarms are not replayed. Timers recognize completion on the next available callback. The operating system controls volume and silent mode.
+通知を受け取る間は、ページを開き、端末を起動したままにしてください。ブラウザを閉じている間や端末のスリープ中は鳴動できません。バックグラウンドでは通知が遅れる場合があります。1分以内に遅延したアラームは一度だけ通知し、それ以前のアラームは再通知しません。タイマーは次に処理が実行されたときに終了を検知します。
 
-The first click or key press enables audio when allowed by the browser. The top-right button reports audio readiness; blocked playback is also reported in the ringing dialog. Verify sound on your device before relying on an alarm.
+最初のクリックまたはキー操作で音声再生を準備します。画面右上の「音は有効です」を確認してください。再生が制限された場合は鳴動ダイアログにも表示します。端末の音量・消音設定も確認してください。
 
-Only alarm settings are persisted, under `clockApp.alarms`. Timers, snoozes, and geolocation selections last for the current page session. Storage is specific to the site origin; clearing site data removes alarms. Storage failures are shown on screen. Weather failures do not interrupt the clock, alarms, or timer.
+アラーム設定のみを `localStorage` の `clockApp.alarms` に保存します。タイマー・スヌーズ・現在地選択は再読み込みで解除されます。保存先はサイトごとに分かれ、サイトデータの削除でアラームも消えます。保存に失敗した場合は画面に表示します。
 
-Change `fixedLocation` in `app.js` for a different fixed installation. Geolocation coordinates are sent to Open-Meteo only after the user requests current-location weather. Weather uses the provider's current model data and requires internet access. Review [Open-Meteo's terms](https://open-meteo.com/en/terms) for your deployment; the application's MIT license does not replace API service terms.
+## 天気の設定
 
-## Verification
+固定地点を変更する場合は、`app.js` の `fixedLocation` にある緯度・経度・地域名を編集してください。「現在地を使う」を押して許可した場合にのみ、位置情報を取得してOpen-Meteoに送信します。
 
-With a local server running on port 8787, run `node tests/browser.cjs` in an environment with Playwright installed. The test uses installed Chrome on Windows by default; set `CHROME_PATH` to override it. It controls browser time and mocks weather for deterministic checks. Screenshots are saved in ignored `tmp/`.
+天気にはインターネット接続が必要です。取得に失敗しても時計・アラーム・タイマーは継続します。天気は提供元の現在の気象モデルデータに基づきます。利用・公開時は [Open-Meteoの利用規約](https://open-meteo.com/en/terms)も確認してください。アプリのMITライセンスとは別に、APIサービスの利用条件が適用されます。
 
-## License
+## 動作テスト
 
-[MIT](LICENSE), including the original notification audio. The local specification PDF and temporary verification files are excluded from Git.
+ポート8787でローカルサーバーを起動し、Playwrightがインストールされた環境で次を実行します。
+
+```sh
+node tests/browser.cjs
+```
+
+標準ではWindowsにインストールされたChromeを使用します。別の実行ファイルを使う場合は環境変数 `CHROME_PATH` で指定してください。テストはブラウザの時刻を制御し、天気APIをテスト用の応答に置き換えて検証します。スクリーンショットはGit対象外の `tmp/` に保存します。
+
+## ライセンス
+
+[MITライセンス](LICENSE)。同梱の独自通知音も対象です。ローカルの仕様書PDFと一時検証ファイルはGitの対象外です。
