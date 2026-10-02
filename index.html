@@ -26,16 +26,14 @@
 
     <div class="workspace">
       <section class="card alarms-panel" aria-labelledby="alarms-heading">
-        <div class="section-heading"><div><p class="eyebrow">YOUR ROUTINE</p><h1 id="alarms-heading">アラーム <span id="alarm-count" class="count">0 / 10</span></h1></div><span class="section-icon" aria-hidden="true">◴</span></div>
-        <p class="section-description">いつもの時間を、忘れずに。</p>
+        <div class="section-heading"><div><h1 id="alarms-heading">アラーム <span id="alarm-count" class="count">0 / 10</span></h1></div></div>
         <div id="alarm-list"></div>
         <button id="alarm-add" class="add-button">＋ アラームを追加</button>
-        <p id="storage-status" class="small-note" role="status">設定はこのブラウザに自動保存されます</p>
+        <p id="storage-status" hidden role="status"></p>
       </section>
 
       <section class="card timer-panel" aria-labelledby="timer-heading">
-        <div class="section-heading"><div><p class="eyebrow">MAKE A MOMENT</p><h2 id="timer-heading">タイマー</h2></div><span class="section-icon" aria-hidden="true">◷</span></div>
-        <p class="section-description">時間を選んで開始。動作中・一時停止中は残り時間に加算。</p>
+        <div class="section-heading"><div><h2 id="timer-heading">タイマー</h2></div></div>
         <div id="presets" class="presets" aria-label="タイマーの時間">
           <button data-minutes="1">1<span>分</span></button><button data-minutes="3">3<span>分</span></button><button data-minutes="5">5<span>分</span></button><button data-minutes="10">10<span>分</span></button><button data-minutes="20">20<span>分</span></button><button data-minutes="30">30<span>分</span></button><button data-minutes="60">60<span>分</span></button><button data-minutes="120">120<span>分</span></button>
         </div>

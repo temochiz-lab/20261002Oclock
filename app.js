@@ -53,11 +53,11 @@ const AlarmManager = {
         (a.oneTime === true ? /^\d{4}-\d{2}-\d{2}$/.test(a.date || '') : true)
       ) || new Set(alarms.map(a => a.id)).size !== alarms.length) throw new Error('Invalid data');
       this.alarms = alarms;
-    } catch { $('#storage-status').textContent = '保存データを読み込めませんでした。新しい設定はこの画面で利用できます。'; }
+    } catch { const status = $('#storage-status'); if (status) status.textContent = '保存データを読み込めませんでした。'; }
   },
   save() {
-    try { localStorage.setItem(alarmKey, JSON.stringify(this.alarms)); $('#storage-status').textContent = '設定はこのブラウザに自動保存されます'; }
-    catch { $('#storage-status').textContent = '保存できませんでした。設定はページを閉じると失われます。'; }
+    try { localStorage.setItem(alarmKey, JSON.stringify(this.alarms)); }
+    catch { const status = $('#storage-status'); if (status) status.textContent = '保存できませんでした。'; }
   },
   cancelPending(id) { this.snoozes = this.snoozes.filter(s => s.id !== id); },
   check(now) {
