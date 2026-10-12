@@ -260,6 +260,15 @@ const UI = {
   },
   updateOneTimeFields() {
     const oneTime = $('#one-time').checked;
+    if (oneTime) {
+      const now = new Date();
+      const selected = $('#alarm-date').value;
+      if (!selected || (selected === now.toISOString().slice(0, 10) && $('#alarm-time').value <= `${pad(now.getHours())}:${pad(now.getMinutes())}`)) {
+        const tomorrow = new Date(now);
+        tomorrow.setDate(now.getDate() + 1);
+        $('#alarm-date').value = tomorrow.toISOString().slice(0, 10);
+      }
+    }
     $('#alarm-date').hidden = !oneTime;
     $('#alarm-date-label').hidden = !oneTime;
     $('#repeat-field').hidden = oneTime;
@@ -305,6 +314,7 @@ $('#alarm-form').onsubmit = event => UI.saveEditor(event);
 $('#dialog-close').onclick = $('#dialog-cancel').onclick = () => $('#alarm-dialog').close();
 $('#every-day').onclick = () => document.querySelectorAll('#days input').forEach(input => { input.checked = true; });
 $('#one-time').onchange = () => UI.updateOneTimeFields();
+$('#alarm-time').onchange = () => { if ($('#one-time').checked) UI.updateOneTimeFields(); };
 $('#presets').onclick = event => { const button = event.target.closest('[data-minutes]'); if (button) TimerManager.start(Number(button.dataset.minutes)); };
 $('#timer-pause').onclick = () => TimerManager.pause();
 $('#timer-stop').onclick = () => TimerManager.stop();
