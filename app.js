@@ -4,6 +4,7 @@ const $ = (selector) => document.querySelector(selector);
 const pad = (value) => String(value).padStart(2, '0');
 const weekdays = ['日', '月', '火', '水', '木', '金', '土'];
 const alarmKey = 'clockApp.alarms';
+const BUILD_DATE = '2026/10/12 09:14:33';
 // Fixed installation location. Geolocation is requested only by the location button.
 const fixedLocation = { latitude: 35.6947, longitude: 139.982, name: '船橋市' };
 
@@ -181,11 +182,11 @@ const WeatherManager = {
       const current = data.current;
       $('#weather').textContent = `${this.description(current.weather_code, current.is_day)}　${current.temperature_2m.toFixed(1)}°C　${name}`;
       const now = new Date();
-      $('#weather-note').textContent = `${pad(now.getHours())}:${pad(now.getMinutes())} 更新 · 15分ごとに自動更新`;
+      $('#weather-note').textContent = `${pad(now.getHours())}:${pad(now.getMinutes())} 更新 · 15分ごとに自動更新 · ビルド ${BUILD_DATE}`;
     } catch {
       if (this.controller !== controller) return;
       $('#weather').textContent = `${name} · 天気を取得できませんでした`;
-      $('#weather-note').textContent = '15分後に再試行します。時計・アラーム・タイマーは利用できます。';
+      $('#weather-note').textContent = `15分後に再試行します · ビルド ${BUILD_DATE}`;
     } finally { clearTimeout(timeout); }
   },
   locate() {
