@@ -51,6 +51,7 @@ const AlarmManager = {
         a && typeof a.id === 'string' && Number.isInteger(a.hour) && a.hour >= 0 && a.hour < 24 &&
         Number.isInteger(a.minute) && a.minute >= 0 && a.minute < 60 && typeof a.enabled === 'boolean' &&
         Array.isArray(a.days) && a.days.length > 0 && a.days.every(d => Number.isInteger(d) && d >= 0 && d < 7) &&
+        (a.label === undefined || typeof a.label === 'string') &&
         (a.oneTime === true ? /^\d{4}-\d{2}-\d{2}$/.test(a.date || '') : true)
       ) || new Set(alarms.map(a => a.id)).size !== alarms.length) throw new Error('Invalid data');
       this.alarms = alarms;
@@ -74,7 +75,7 @@ const AlarmManager = {
           this.fired.set(a.id, stamp);
           a.enabled = false;
           this.save();
-          hits.push({ type: 'alarm', id: a.id, label: `${a.date} ${pad(a.hour)}:${pad(a.minute)} のアラーム` });
+          hits.push({ type: 'alarm', id: a.id, label: `${a.label ? `${a.label} · ` : ''}${a.date} ${pad(a.hour)}:${pad(a.minute)} のアラーム` });
         }
         continue;
       }
@@ -85,7 +86,7 @@ const AlarmManager = {
         const stamp = scheduled.getTime();
         if (a.days.includes(scheduled.getDay()) && stamp > start && stamp <= now && this.fired.get(a.id) !== stamp) {
           this.fired.set(a.id, stamp);
-          hits.push({ type: 'alarm', id: a.id, label: `${pad(a.hour)}:${pad(a.minute)} のアラーム` });
+          hits.push({ type: 'alarm', id: a.id, label: `${a.label ? `${a.label} · ` : ''}${pad(a.hour)}:${pad(a.minute)} のアラーム` });
         }
       }
     }
@@ -223,6 +224,12 @@ const UI = {
       const time = `${pad(a.hour)}:${pad(a.minute)}`;
       const repeatLabel = a.oneTime ? `一回限り · ${a.date}` : (new Set(a.days).size === 7 ? '毎日' : [...new Set(a.days)].sort().map(d => weekdays[d]).join('・'));
       row.innerHTML = `<div class="alarm-info"><div class="alarm-time">${time}</div><div class="alarm-days">${repeatLabel}</div></div>`;
+      if (a.label) {
+        const label = document.createElement('div');
+        label.className = 'alarm-label';
+        label.textContent = a.label;
+        row.querySelector('.alarm-info').prepend(label);
+      }
       const toggle = document.createElement('button');
       toggle.className = 'toggle'; toggle.setAttribute('role', 'switch'); toggle.setAttribute('aria-checked', String(a.enabled)); toggle.setAttribute('aria-label', `${time} のアラーム`); toggle.textContent = a.enabled ? 'ON' : 'OFF';
       toggle.onclick = () => { a.enabled = !a.enabled; if (!a.enabled) AlarmManager.cancelPending(a.id); AlarmManager.save(); this.renderAlarms(); };
@@ -237,6 +244,7 @@ const UI = {
     this.editing = alarm?.id ?? null;
     $('#dialog-title').textContent = alarm ? 'アラームを編集' : 'アラームを追加';
     $('#alarm-time').value = alarm ? `${pad(alarm.hour)}:${pad(alarm.minute)}` : '07:00';
+    $('#alarm-label').value = alarm?.label ?? '';
     $('#alarm-enabled').checked = alarm?.enabled ?? true;
     $('#one-time').checked = alarm?.oneTime ?? false;
     $('#alarm-date').value = alarm?.date ?? new Date().toISOString().slice(0, 10);
@@ -253,7 +261,7 @@ const UI = {
     if (oneTime && !$('#alarm-date').value) { $('#form-error').textContent = '日付を選んでください。'; return; }
     if (!this.editing && AlarmManager.alarms.length >= 10) return;
     const [hour, minute] = $('#alarm-time').value.split(':').map(Number);
-    const alarm = { id: this.editing ?? crypto.randomUUID(), hour, minute, days: oneTime ? [new Date(`${$('#alarm-date').value}T00:00:00`).getDay()] : days, date: oneTime ? $('#alarm-date').value : null, oneTime, enabled: $('#alarm-enabled').checked };
+    const alarm = { id: this.editing ?? crypto.randomUUID(), hour, minute, days: oneTime ? [new Date(`${$('#alarm-date').value}T00:00:00`).getDay()] : days, date: oneTime ? $('#alarm-date').value : null, oneTime, label: $('#alarm-label').value.trim(), enabled: $('#alarm-enabled').checked };
     const index = AlarmManager.alarms.findIndex(a => a.id === this.editing);
     if (index >= 0) { AlarmManager.alarms[index] = alarm; AlarmManager.cancelPending(alarm.id); }
     else AlarmManager.alarms.push(alarm);

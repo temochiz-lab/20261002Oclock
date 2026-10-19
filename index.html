@@ -47,6 +47,7 @@
     <form id="alarm-form">
       <div class="dialog-heading"><h2 id="dialog-title">アラームを追加</h2><button type="button" id="dialog-close" class="icon-button" aria-label="閉じる">×</button></div>
       <label class="field-label" for="alarm-time">時刻</label><input id="alarm-time" type="time" required step="60" value="07:00">
+      <label class="field-label" for="alarm-label">ラベル（任意）</label><input id="alarm-label" type="text" maxlength="40" placeholder="例：起床、薬を飲む">
       <label class="enabled-label"><input id="one-time" type="checkbox"> 一回限りのアラーム</label>
       <label id="alarm-date-label" class="field-label" for="alarm-date" hidden>日付</label><input id="alarm-date" type="date" hidden>
       <fieldset id="repeat-field"><legend>繰り返す曜日</legend><div id="days" class="days"></div><button type="button" id="every-day" class="text-button">毎日を選択</button></fieldset>
