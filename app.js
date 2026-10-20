@@ -5,6 +5,7 @@ const pad = (value) => String(value).padStart(2, '0');
 const weekdays = ['日', '月', '火', '水', '木', '金', '土'];
 const alarmKey = 'clockApp.alarms';
 const BUILD_DATE = '2026/10/12 09:14:33';
+const localDateString = (date) => `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 // Fixed installation location. Geolocation is requested only by the location button.
 const fixedLocation = { latitude: 35.6947, longitude: 139.982, name: '船橋市' };
 
@@ -247,7 +248,6 @@ const UI = {
     $('#alarm-label').value = alarm?.label ?? '';
     $('#alarm-enabled').checked = alarm?.enabled ?? true;
     $('#one-time').checked = alarm?.oneTime ?? false;
-    $('#alarm-date').value = alarm?.date ?? new Date().toISOString().slice(0, 10);
     this.updateOneTimeFields();
     $('#form-error').textContent = '';
     for (const input of document.querySelectorAll('#days input')) input.checked = alarm ? alarm.days.includes(Number(input.value)) : true;
@@ -258,10 +258,17 @@ const UI = {
     const days = [...document.querySelectorAll('#days input:checked')].map(input => Number(input.value));
     const oneTime = $('#one-time').checked;
     if (!oneTime && !days.length) { $('#form-error').textContent = '曜日を1つ以上選んでください。'; return; }
-    if (oneTime && !$('#alarm-date').value) { $('#form-error').textContent = '日付を選んでください。'; return; }
     if (!this.editing && AlarmManager.alarms.length >= 10) return;
     const [hour, minute] = $('#alarm-time').value.split(':').map(Number);
-    const alarm = { id: this.editing ?? crypto.randomUUID(), hour, minute, days: oneTime ? [new Date(`${$('#alarm-date').value}T00:00:00`).getDay()] : days, date: oneTime ? $('#alarm-date').value : null, oneTime, label: $('#alarm-label').value.trim(), enabled: $('#alarm-enabled').checked };
+    let date = null;
+    if (oneTime) {
+      const now = new Date();
+      const scheduled = new Date(now);
+      scheduled.setHours(hour, minute, 0, 0);
+      if (scheduled <= now) scheduled.setDate(scheduled.getDate() + 1);
+      date = localDateString(scheduled);
+    }
+    const alarm = { id: this.editing ?? crypto.randomUUID(), hour, minute, days: oneTime ? [new Date(`${date}T00:00:00`).getDay()] : days, date, oneTime, label: $('#alarm-label').value.trim(), enabled: $('#alarm-enabled').checked };
     const index = AlarmManager.alarms.findIndex(a => a.id === this.editing);
     if (index >= 0) { AlarmManager.alarms[index] = alarm; AlarmManager.cancelPending(alarm.id); }
     else AlarmManager.alarms.push(alarm);
@@ -269,17 +276,6 @@ const UI = {
   },
   updateOneTimeFields() {
     const oneTime = $('#one-time').checked;
-    if (oneTime) {
-      const now = new Date();
-      const selected = $('#alarm-date').value;
-      if (!selected || (selected === now.toISOString().slice(0, 10) && $('#alarm-time').value <= `${pad(now.getHours())}:${pad(now.getMinutes())}`)) {
-        const tomorrow = new Date(now);
-        tomorrow.setDate(now.getDate() + 1);
-        $('#alarm-date').value = tomorrow.toISOString().slice(0, 10);
-      }
-    }
-    $('#alarm-date').hidden = !oneTime;
-    $('#alarm-date-label').hidden = !oneTime;
     $('#repeat-field').hidden = oneTime;
   },
   ring(items) {
@@ -323,7 +319,6 @@ $('#alarm-form').onsubmit = event => UI.saveEditor(event);
 $('#dialog-close').onclick = $('#dialog-cancel').onclick = () => $('#alarm-dialog').close();
 $('#every-day').onclick = () => document.querySelectorAll('#days input').forEach(input => { input.checked = true; });
 $('#one-time').onchange = () => UI.updateOneTimeFields();
-$('#alarm-time').onchange = () => { if ($('#one-time').checked) UI.updateOneTimeFields(); };
 $('#presets').onclick = event => { const button = event.target.closest('[data-minutes]'); if (button) TimerManager.start(Number(button.dataset.minutes)); };
 $('#timer-pause').onclick = () => TimerManager.pause();
 $('#timer-stop').onclick = () => TimerManager.stop();
