@@ -4,7 +4,7 @@ const $ = (selector) => document.querySelector(selector);
 const pad = (value) => String(value).padStart(2, '0');
 const weekdays = ['日', '月', '火', '水', '木', '金', '土'];
 const alarmKey = 'clockApp.alarms';
-const BUILD_DATE = '2026/10/12 09:14:33';
+const BUILD_DATE = '2026/10/20 17:48:21';
 const localDateString = (date) => `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 // Fixed installation location. Geolocation is requested only by the location button.
 const fixedLocation = { latitude: 35.6947, longitude: 139.982, name: '船橋市' };
