@@ -268,8 +268,8 @@ const UI = {
       if (scheduled <= now) scheduled.setDate(scheduled.getDate() + 1);
       date = localDateString(scheduled);
     }
-    const alarm = { id: this.editing ?? crypto.randomUUID(), hour, minute, days: oneTime ? [new Date(`${date}T00:00:00`).getDay()] : days, date, oneTime, label: $('#alarm-label').value.trim(), enabled: $('#alarm-enabled').checked };
     const index = AlarmManager.alarms.findIndex(a => a.id === this.editing);
+    const alarm = { id: this.editing ?? crypto.randomUUID(), hour, minute, days: oneTime ? [new Date(`${date}T00:00:00`).getDay()] : days, date, oneTime, label: $('#alarm-label').value.trim(), enabled: index >= 0 ? true : $('#alarm-enabled').checked };
     if (index >= 0) { AlarmManager.alarms[index] = alarm; AlarmManager.cancelPending(alarm.id); }
     else AlarmManager.alarms.push(alarm);
     AlarmManager.save(); this.renderAlarms(); $('#alarm-dialog').close();
