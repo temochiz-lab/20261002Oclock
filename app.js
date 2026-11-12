@@ -4,6 +4,7 @@ const $ = (selector) => document.querySelector(selector);
 const pad = (value) => String(value).padStart(2, '0');
 const weekdays = ['日', '月', '火', '水', '木', '金', '土'];
 const alarmKey = 'clockApp.alarms';
+const alarmMaxDuration = 10 * 60 * 1000;
 const BUILD_DATE = '2026/10/20 17:48:21';
 const localDateString = (date) => `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 // Fixed installation location. Geolocation is requested only by the location button.
@@ -12,6 +13,7 @@ const fixedLocation = { latitude: 35.6947, longitude: 139.982, name: '船橋市'
 const SoundManager = {
   audio: new Audio('sounds/alarm.mp3'),
   ready: false,
+  stopTimeout: null,
   async unlock() {
     if (this.ready) return;
     this.audio.loop = true;
@@ -30,12 +32,19 @@ const SoundManager = {
     }
   },
   async play() {
+    clearTimeout(this.stopTimeout);
     this.audio.loop = true;
     this.audio.muted = false;
-    try { await this.audio.play(); $('#sound-error').textContent = ''; }
+    try {
+      await this.audio.play();
+      $('#sound-error').textContent = '';
+      if (UI.ringing.some(item => item.type === 'alarm')) {
+        this.stopTimeout = setTimeout(() => UI.stopRing(), alarmMaxDuration);
+      }
+    }
     catch { $('#sound-error').textContent = '音を再生できません。画面上部の「音を有効にする」を押してお使いください。'; }
   },
-  stop() { this.audio.pause(); this.audio.currentTime = 0; }
+  stop() { clearTimeout(this.stopTimeout); this.stopTimeout = null; this.audio.pause(); this.audio.currentTime = 0; }
 };
 
 const AlarmManager = {
