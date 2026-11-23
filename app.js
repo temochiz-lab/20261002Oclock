@@ -39,7 +39,12 @@ const SoundManager = {
       await this.audio.play();
       $('#sound-error').textContent = '';
       if (UI.ringing.some(item => item.type === 'alarm')) {
-        this.stopTimeout = setTimeout(() => UI.stopRing(), alarmMaxDuration);
+        this.stopTimeout = setTimeout(() => {
+          this.stop();
+          $('#ring-title').textContent = 'アラーム音を停止しました';
+          $('#ring-stop').hidden = true;
+          $('#ring-snooze').hidden = true;
+        }, alarmMaxDuration);
       }
     }
     catch { $('#sound-error').textContent = '音を再生できません。画面上部の「音を有効にする」を押してお使いください。'; }
@@ -150,6 +155,12 @@ const TimerManager = {
     const h = Math.floor(seconds / 3600), m = Math.floor(seconds / 60) % 60, s = seconds % 60;
     $('#timer-remaining').textContent = h ? `${pad(h)}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`;
     $('#timer-status').textContent = ({ idle: '準備ができたら、ひと呼吸。', running: `${this.total / 60000}分タイマー · 残り時間`, paused: '一時停止中', stopped: '停止しました', finished: '時間になりました' })[this.state];
+    const endTime = $('#timer-end-time');
+    endTime.hidden = !['running', 'paused'].includes(this.state);
+    if (!endTime.hidden) {
+      const target = new Date(this.state === 'running' ? this.end : Date.now() + this.remaining);
+      endTime.textContent = `${pad(target.getHours())}:${pad(target.getMinutes())} に終了予定`;
+    }
     $('#timer-pause').textContent = this.state === 'paused' ? '再開' : '一時停止';
     $('#timer-pause').disabled = !['running', 'paused'].includes(this.state);
     $('#timer-stop').disabled = !['running', 'paused'].includes(this.state);
@@ -290,6 +301,7 @@ const UI = {
   ring(items) {
     this.ringing.push(...items);
     $('#ring-title').textContent = this.ringing.some(i => i.type === 'alarm') ? 'アラームの時間です' : 'タイマーが終了しました';
+    $('#ring-stop').hidden = false;
     $('#ring-detail').textContent = this.ringing.map(i => i.label).join('\n');
     $('#ring-snooze').hidden = !this.ringing.some(i => i.type === 'alarm');
     if (!$('#ring-dialog').open) $('#ring-dialog').showModal();
