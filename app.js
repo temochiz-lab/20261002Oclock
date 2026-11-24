@@ -6,7 +6,7 @@ const weekdays = ['日', '月', '火', '水', '木', '金', '土'];
 const alarmKey = 'clockApp.alarms';
 const alarmMaxDuration = 10 * 60 * 1000;
 const chimeMaxDuration = 60 * 1000;
-const BUILD_DATE = '2026/11/24 20:16:12';
+const BUILD_DATE = '2026/11/24 20:18:00';
 const localDateString = (date) => `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 // Fixed installation location. Geolocation is requested only by the location button.
 const fixedLocation = { latitude: 35.6947, longitude: 139.982, name: '船橋市' };
@@ -271,7 +271,7 @@ const UI = {
     $('#alarm-enabled').checked = alarm?.enabled ?? true;
     $('#one-time').checked = alarm?.oneTime ?? false;
     $('#chime').checked = alarm?.chime ?? false;
-    $('#chime').disabled = Boolean(alarm && !alarm.oneTime);
+    $('#chime').disabled = false;
     this.updateOneTimeFields();
     $('#form-error').textContent = '';
     for (const input of document.querySelectorAll('#days input')) input.checked = alarm ? alarm.days.includes(Number(input.value)) : true;
@@ -282,7 +282,6 @@ const UI = {
     const days = [...document.querySelectorAll('#days input:checked')].map(input => Number(input.value));
     const oneTime = $('#one-time').checked;
     const chime = $('#chime').checked;
-    if (chime && !oneTime) { $('#form-error').textContent = '時報は「一回限り」と一緒に設定してください。'; return; }
     if (!oneTime && !days.length) { $('#form-error').textContent = '曜日を1つ以上選んでください。'; return; }
     if (!this.editing && AlarmManager.alarms.length >= 10) return;
     const [hour, minute] = $('#alarm-time').value.split(':').map(Number);
@@ -345,7 +344,7 @@ $('#alarm-add').onclick = () => UI.openEditor();
 $('#alarm-form').onsubmit = event => UI.saveEditor(event);
 $('#dialog-close').onclick = $('#dialog-cancel').onclick = () => $('#alarm-dialog').close();
 $('#every-day').onclick = () => document.querySelectorAll('#days input').forEach(input => { input.checked = true; });
-$('#one-time').onchange = () => { UI.updateOneTimeFields(); $('#chime').disabled = !$('#one-time').checked; if (!$('#one-time').checked) $('#chime').checked = false; };
+$('#one-time').onchange = () => UI.updateOneTimeFields();
 $('#presets').onclick = event => { const button = event.target.closest('[data-minutes]'); if (button) TimerManager.start(Number(button.dataset.minutes)); };
 $('#timer-pause').onclick = () => TimerManager.pause();
 $('#timer-stop').onclick = () => TimerManager.stop();
