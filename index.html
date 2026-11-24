@@ -25,6 +25,12 @@
     </section>
 
     <div class="workspace">
+      <section class="card chimes-panel" aria-labelledby="chimes-heading">
+        <div class="section-heading"><div><h1 id="chimes-heading">時報 <span id="chime-count" class="count">0</span></h1></div></div>
+        <div id="chime-list"></div>
+        <button id="chime-add" class="add-button">＋ 時報を追加</button>
+      </section>
+
       <section class="card alarms-panel" aria-labelledby="alarms-heading">
         <div class="section-heading"><div><h1 id="alarms-heading">アラーム <span id="alarm-count" class="count">0 / 10</span></h1></div></div>
         <div id="alarm-list"></div>
@@ -48,8 +54,8 @@
       <div class="dialog-heading"><h2 id="dialog-title">アラームを追加</h2><button type="button" id="dialog-close" class="icon-button" aria-label="閉じる">×</button></div>
       <label class="field-label" for="alarm-time">時刻</label><input id="alarm-time" type="time" required step="60" value="07:00">
       <label class="field-label" for="alarm-label">ラベル（任意）</label><input id="alarm-label" type="text" maxlength="40" placeholder="例：起床、薬を飲む">
-      <label class="enabled-label"><input id="one-time" type="checkbox"> 一回限りのアラーム</label>
-      <label class="enabled-label"><input id="chime" type="checkbox"> 時報（スヌーズなし・最大1分）</label>
+      <label id="one-time-option" class="enabled-label"><input id="one-time" type="checkbox"> 一回限りのアラーム</label>
+      <label id="chime-option" class="enabled-label" hidden><input id="chime" type="checkbox" checked disabled> 時報（1回だけ鳴る・スヌーズなし）</label>
       <fieldset id="repeat-field"><legend>繰り返す曜日</legend><div id="days" class="days"></div><button type="button" id="every-day" class="text-button">毎日を選択</button></fieldset>
       <label class="enabled-label"><input id="alarm-enabled" type="checkbox" checked> アラームを有効にする</label>
       <p id="form-error" class="error" role="alert"></p>

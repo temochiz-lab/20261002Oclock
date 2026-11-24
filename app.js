@@ -5,7 +5,7 @@ const pad = (value) => String(value).padStart(2, '0');
 const weekdays = ['日', '月', '火', '水', '木', '金', '土'];
 const alarmKey = 'clockApp.alarms';
 const alarmMaxDuration = 10 * 60 * 1000;
-const BUILD_DATE = '2026/11/24 20:21:47';
+const BUILD_DATE = '2026/11/24 20:29:09';
 const localDateString = (date) => `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 // Fixed installation location. Geolocation is requested only by the location button.
 const fixedLocation = { latitude: 35.6947, longitude: 139.982, name: '船橋市' };
@@ -246,22 +246,29 @@ const WeatherManager = {
 
 const UI = {
   editing: null,
+  editingChime: false,
   ringing: [],
   renderAlarms() {
     const list = $('#alarm-list');
-    list.replaceChildren();
-    $('#alarm-count').textContent = `${AlarmManager.alarms.length} / 10`;
+    const chimeList = $('#chime-list');
+    list.replaceChildren(); chimeList.replaceChildren();
+    const alarms = AlarmManager.alarms.filter(a => !a.chime);
+    const chimes = AlarmManager.alarms.filter(a => a.chime);
+    $('#alarm-count').textContent = `${alarms.length} / 10`;
+    $('#chime-count').textContent = chimes.length;
     $('#alarm-add').disabled = AlarmManager.alarms.length >= 10;
-    if (!AlarmManager.alarms.length) {
+    $('#chime-add').disabled = AlarmManager.alarms.length >= 10;
+    if (!alarms.length) {
       list.innerHTML = '<div class="empty"><span class="empty-symbol" aria-hidden="true">◴</span><p>まだアラームはありません</p><small>朝の目覚めも、ひと休みの時間も。</small></div>';
-      return;
     }
-    for (const a of [...AlarmManager.alarms].sort((a, b) => a.hour - b.hour || a.minute - b.minute)) {
+    if (!chimes.length) chimeList.innerHTML = '<div class="empty"><span class="empty-symbol" aria-hidden="true">♬</span><p>時報はありません</p><small>設定した曜日に一度だけ鳴ります。</small></div>';
+    for (const a of [...alarms, ...chimes].sort((a, b) => a.hour - b.hour || a.minute - b.minute)) {
+      const isChime = a.chime === true;
       const row = document.createElement('div');
       row.className = `alarm-row${a.enabled ? '' : ' off'}`;
       const time = `${pad(a.hour)}:${pad(a.minute)}`;
       const repeatLabel = a.oneTime ? `一回限り · ${a.date}` : (new Set(a.days).size === 7 ? '毎日' : [...new Set(a.days)].sort().map(d => weekdays[d]).join('・'));
-      row.innerHTML = `<div class="alarm-info"><div class="alarm-time">${time}</div><div class="alarm-days">${repeatLabel}</div></div>`;
+      row.innerHTML = `<div class="alarm-info"><div class="alarm-time">${time}</div><div class="alarm-days">${isChime ? '時報 · ' : ''}${repeatLabel}</div></div>`;
       if (a.label) {
         const label = document.createElement('div');
         label.className = 'alarm-label';
@@ -269,24 +276,28 @@ const UI = {
         row.querySelector('.alarm-info').prepend(label);
       }
       const toggle = document.createElement('button');
-      toggle.className = 'toggle'; toggle.setAttribute('role', 'switch'); toggle.setAttribute('aria-checked', String(a.enabled)); toggle.setAttribute('aria-label', `${time} のアラーム`); toggle.textContent = a.enabled ? 'ON' : 'OFF';
+      toggle.className = 'toggle'; toggle.setAttribute('role', 'switch'); toggle.setAttribute('aria-checked', String(a.enabled)); toggle.setAttribute('aria-label', `${time} の${isChime ? '時報' : 'アラーム'}`); toggle.textContent = a.enabled ? 'ON' : 'OFF';
       toggle.onclick = () => { a.enabled = !a.enabled; if (!a.enabled) AlarmManager.cancelPending(a.id); AlarmManager.save(); this.renderAlarms(); };
-      const edit = document.createElement('button'); edit.className = 'icon-button edit'; edit.textContent = '編集'; edit.setAttribute('aria-label', `${time} を編集`); edit.onclick = () => this.openEditor(a);
+      const edit = document.createElement('button'); edit.className = 'icon-button edit'; edit.textContent = '編集'; edit.setAttribute('aria-label', `${time} を編集`); edit.onclick = () => this.openEditor(a, isChime);
       const remove = document.createElement('button'); remove.className = 'icon-button delete'; remove.textContent = '削除'; remove.setAttribute('aria-label', `${time} を削除`);
       remove.onclick = () => { AlarmManager.alarms = AlarmManager.alarms.filter(item => item.id !== a.id); AlarmManager.cancelPending(a.id); AlarmManager.fired.delete(a.id); AlarmManager.save(); this.renderAlarms(); };
-      row.append(toggle, edit, remove); list.append(row);
+      row.append(toggle, edit, remove); (isChime ? chimeList : list).append(row);
     }
   },
-  openEditor(alarm = null) {
+  openEditor(alarm = null, chimeMode = false) {
     if (!alarm && AlarmManager.alarms.length >= 10) return;
     this.editing = alarm?.id ?? null;
-    $('#dialog-title').textContent = alarm ? 'アラームを編集' : 'アラームを追加';
+    this.editingChime = chimeMode || alarm?.chime === true;
+    $('#dialog-title').textContent = this.editingChime ? (alarm ? '時報を編集' : '時報を追加') : (alarm ? 'アラームを編集' : 'アラームを追加');
     $('#alarm-time').value = alarm ? `${pad(alarm.hour)}:${pad(alarm.minute)}` : '07:00';
     $('#alarm-label').value = alarm?.label ?? '';
     $('#alarm-enabled').checked = alarm?.enabled ?? true;
     $('#one-time').checked = alarm?.oneTime ?? false;
-    $('#chime').checked = alarm?.chime ?? false;
-    $('#chime').disabled = false;
+    $('#chime-option').hidden = !this.editingChime;
+    $('#one-time-option').hidden = this.editingChime;
+    $('#chime').checked = this.editingChime;
+    $('#one-time').disabled = this.editingChime;
+    if (this.editingChime && !alarm) $('#one-time').checked = false;
     this.updateOneTimeFields();
     $('#form-error').textContent = '';
     for (const input of document.querySelectorAll('#days input')) input.checked = alarm ? alarm.days.includes(Number(input.value)) : true;
@@ -295,8 +306,8 @@ const UI = {
   saveEditor(event) {
     event.preventDefault();
     const days = [...document.querySelectorAll('#days input:checked')].map(input => Number(input.value));
-    const oneTime = $('#one-time').checked;
-    const chime = $('#chime').checked;
+    const oneTime = !this.editingChime && $('#one-time').checked;
+    const chime = this.editingChime;
     if (!oneTime && !days.length) { $('#form-error').textContent = '曜日を1つ以上選んでください。'; return; }
     if (!this.editing && AlarmManager.alarms.length >= 10) return;
     const [hour, minute] = $('#alarm-time').value.split(':').map(Number);
@@ -356,6 +367,7 @@ for (const [day, label] of weekdays.entries()) {
 document.addEventListener('click', () => SoundManager.unlock());
 document.addEventListener('keydown', () => SoundManager.unlock());
 $('#alarm-add').onclick = () => UI.openEditor();
+$('#chime-add').onclick = () => UI.openEditor(null, true);
 $('#alarm-form').onsubmit = event => UI.saveEditor(event);
 $('#dialog-close').onclick = $('#dialog-cancel').onclick = () => $('#alarm-dialog').close();
 $('#every-day').onclick = () => document.querySelectorAll('#days input').forEach(input => { input.checked = true; });
