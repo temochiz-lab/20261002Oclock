@@ -5,6 +5,7 @@ const pad = (value) => String(value).padStart(2, '0');
 const weekdays = ['日', '月', '火', '水', '木', '金', '土'];
 const alarmKey = 'clockApp.alarms';
 const alarmMaxDuration = 10 * 60 * 1000;
+const chimeMaxDuration = 60 * 1000;
 const BUILD_DATE = '2026/10/20 17:48:21';
 const localDateString = (date) => `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 // Fixed installation location. Geolocation is requested only by the location button.
@@ -38,13 +39,14 @@ const SoundManager = {
     try {
       await this.audio.play();
       $('#sound-error').textContent = '';
-      if (UI.ringing.some(item => item.type === 'alarm')) {
+      const limit = UI.ringing.some(item => item.chime) ? chimeMaxDuration : (UI.ringing.some(item => item.type === 'alarm') ? alarmMaxDuration : 0);
+      if (limit) {
         this.stopTimeout = setTimeout(() => {
           this.stop();
           $('#ring-title').textContent = 'アラーム音を停止しました';
           $('#ring-stop').hidden = true;
           $('#ring-snooze').hidden = true;
-        }, alarmMaxDuration);
+        }, limit);
       }
     }
     catch { $('#sound-error').textContent = '音を再生できません。画面上部の「音を有効にする」を押してお使いください。'; }
@@ -90,7 +92,7 @@ const AlarmManager = {
           this.fired.set(a.id, stamp);
           a.enabled = false;
           this.save();
-          hits.push({ type: 'alarm', id: a.id, label: `${a.label ? `${a.label} · ` : ''}${a.date} ${pad(a.hour)}:${pad(a.minute)} のアラーム` });
+        hits.push({ type: 'alarm', id: a.id, chime: a.chime === true, label: `${a.label ? `${a.label} · ` : ''}${a.date} ${pad(a.hour)}:${pad(a.minute)} の${a.chime ? '時報' : 'アラーム'}` });
         }
         continue;
       }
@@ -101,7 +103,7 @@ const AlarmManager = {
         const stamp = scheduled.getTime();
         if (a.days.includes(scheduled.getDay()) && stamp > start && stamp <= now && this.fired.get(a.id) !== stamp) {
           this.fired.set(a.id, stamp);
-          hits.push({ type: 'alarm', id: a.id, label: `${a.label ? `${a.label} · ` : ''}${pad(a.hour)}:${pad(a.minute)} のアラーム` });
+          hits.push({ type: 'alarm', id: a.id, chime: a.chime === true, label: `${a.label ? `${a.label} · ` : ''}${pad(a.hour)}:${pad(a.minute)} の${a.chime ? '時報' : 'アラーム'}` });
         }
       }
     }
@@ -268,6 +270,8 @@ const UI = {
     $('#alarm-label').value = alarm?.label ?? '';
     $('#alarm-enabled').checked = alarm?.enabled ?? true;
     $('#one-time').checked = alarm?.oneTime ?? false;
+    $('#chime').checked = alarm?.chime ?? false;
+    $('#chime').disabled = Boolean(alarm && !alarm.oneTime);
     this.updateOneTimeFields();
     $('#form-error').textContent = '';
     for (const input of document.querySelectorAll('#days input')) input.checked = alarm ? alarm.days.includes(Number(input.value)) : true;
@@ -277,6 +281,8 @@ const UI = {
     event.preventDefault();
     const days = [...document.querySelectorAll('#days input:checked')].map(input => Number(input.value));
     const oneTime = $('#one-time').checked;
+    const chime = $('#chime').checked;
+    if (chime && !oneTime) { $('#form-error').textContent = '時報は「一回限り」と一緒に設定してください。'; return; }
     if (!oneTime && !days.length) { $('#form-error').textContent = '曜日を1つ以上選んでください。'; return; }
     if (!this.editing && AlarmManager.alarms.length >= 10) return;
     const [hour, minute] = $('#alarm-time').value.split(':').map(Number);
@@ -289,7 +295,7 @@ const UI = {
       date = localDateString(scheduled);
     }
     const index = AlarmManager.alarms.findIndex(a => a.id === this.editing);
-    const alarm = { id: this.editing ?? crypto.randomUUID(), hour, minute, days: oneTime ? [new Date(`${date}T00:00:00`).getDay()] : days, date, oneTime, label: $('#alarm-label').value.trim(), enabled: index >= 0 ? true : $('#alarm-enabled').checked };
+    const alarm = { id: this.editing ?? crypto.randomUUID(), hour, minute, days: oneTime ? [new Date(`${date}T00:00:00`).getDay()] : days, date, oneTime, chime, label: $('#alarm-label').value.trim(), enabled: index >= 0 ? true : $('#alarm-enabled').checked };
     if (index >= 0) { AlarmManager.alarms[index] = alarm; AlarmManager.cancelPending(alarm.id); }
     else AlarmManager.alarms.push(alarm);
     AlarmManager.save(); this.renderAlarms(); $('#alarm-dialog').close();
@@ -303,7 +309,7 @@ const UI = {
     $('#ring-title').textContent = this.ringing.some(i => i.type === 'alarm') ? 'アラームの時間です' : 'タイマーが終了しました';
     $('#ring-stop').hidden = false;
     $('#ring-detail').textContent = this.ringing.map(i => i.label).join('\n');
-    $('#ring-snooze').hidden = !this.ringing.some(i => i.type === 'alarm');
+    $('#ring-snooze').hidden = !this.ringing.some(i => i.type === 'alarm' && !i.chime);
     if (!$('#ring-dialog').open) $('#ring-dialog').showModal();
     SoundManager.play();
   },
@@ -339,7 +345,7 @@ $('#alarm-add').onclick = () => UI.openEditor();
 $('#alarm-form').onsubmit = event => UI.saveEditor(event);
 $('#dialog-close').onclick = $('#dialog-cancel').onclick = () => $('#alarm-dialog').close();
 $('#every-day').onclick = () => document.querySelectorAll('#days input').forEach(input => { input.checked = true; });
-$('#one-time').onchange = () => UI.updateOneTimeFields();
+$('#one-time').onchange = () => { UI.updateOneTimeFields(); $('#chime').disabled = !$('#one-time').checked; if (!$('#one-time').checked) $('#chime').checked = false; };
 $('#presets').onclick = event => { const button = event.target.closest('[data-minutes]'); if (button) TimerManager.start(Number(button.dataset.minutes)); };
 $('#timer-pause').onclick = () => TimerManager.pause();
 $('#timer-stop').onclick = () => TimerManager.stop();
