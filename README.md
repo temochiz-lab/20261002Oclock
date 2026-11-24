@@ -22,15 +22,9 @@ GitHub Pages URL：<https://temochiz-lab.github.io/20261002Oclock/>
 - **天気・気温**：[Open-Meteo](https://open-meteo.com/en/docs)から15分ごとに取得します。初期地点は船橋市で、現在地にも切り替えられます。
 - **通知音**：アラーム音に加えて、時報用の「ピッ、ピッ、ピー」音を同梱しています。
 
-## ローカルで起動
+## 起動
 
-このフォルダーで、次のコマンドなどを使って静的HTTPサーバーを起動します。
-
-```sh
-python -m http.server 8787 --bind 127.0.0.1
-```
-
-ブラウザで [http://localhost:8787](http://localhost:8787) を開きます。ビルドや実行用ライブラリのインストールは不要です。現在地の取得には localhost または HTTPS を使用してください。
+ブラウザで [Oclock を開く](https://temochiz-lab.github.io/20261002Oclock/) を押してください。インストールやローカルサーバーの起動は不要です。
 
 ## ファイル構成
 
